@@ -1,0 +1,25 @@
+name: Validate skills
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - name: Validate SKILL.md files
+        run: python3 scripts/validate.py
+
+      - name: Regenerate INDEX.md and ensure it's committed
+        run: |
+          python3 scripts/generate_index.py
+          git diff --exit-code
