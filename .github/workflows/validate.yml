@@ -11,15 +11,41 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - name: Set up Node
+        uses: actions/setup-node@v4
         with:
-          python-version: "3.x"
+          node-version: "20"
 
-      - name: Validate SKILL.md files
-        run: python3 scripts/validate.py
+      - name: Install dependencies
+        run: npm install
 
-      - name: Regenerate INDEX.md and ensure it's committed
+      - name: Validate module structure
         run: |
-          python3 scripts/generate_index.py
-          git diff --exit-code
+          set -euo pipefail
+          for dir in */ ; do
+            if [ -f "${dir}SKILL.md" ]; then
+              test -f "${dir}sidekick.module.json"
+              test -f "${dir}playbook.md"
+              test -f "${dir}snippets/kernel.md"
+            fi
+          done
+
+      - name: Smoke test CLI
+        run: node .github/scripts/test-cli.js
+
+  validate-windows:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Smoke test CLI (Windows)
+        run: node .github/scripts/test-cli.js
