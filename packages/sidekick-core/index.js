@@ -3,6 +3,7 @@ const fs = require("fs");
 const os = require("os");
 const path = require("path");
 const { spawnSync } = require("child_process");
+const { adapterRegistry, getEnabledAdapters } = require("./adapters");
 
 function ensureDir(dirPath) {
   fs.mkdirSync(dirPath, { recursive: true });
@@ -627,8 +628,9 @@ function writeAgentsOutputs(root, config, modules) {
   validateBudgets(config.budgets || {}, parts, modules);
 
   const adapters = config.adapters || {};
-  const symlinks = adapters.symlinkFiles || [];
-  const needsAgentsMd = adapters.agentsMd || (Array.isArray(adapters.symlinkFiles) ? adapters.symlinkFiles.length : 0) || adapters.aiderConf || adapters.geminiSettings;
+  const registry = adapterRegistry();
+  const enabledAdapters = getEnabledAdapters(config, registry);
+  const needsAgentsMd = Boolean(adapters.agentsMd) || enabledAdapters.some((adapter) => adapter.requiresAgentsMd);
 
   const isManagedCopy = (filePath) => {
     const current = normalizeNewlines(fs.readFileSync(filePath, "utf8"));
@@ -640,51 +642,24 @@ function writeAgentsOutputs(root, config, modules) {
     return false;
   };
 
+  const adapterContext = {
+    fs,
+    path,
+    root,
+    adapters,
+    agentsMdPath,
+    agentsContent,
+    prevAgentsContent,
+    normalizeNewlines,
+    isSafeAdapterFilename,
+    isManagedSymlink,
+    isManagedCopy,
+    isManagedGeminiSettingsContent,
+    ensureDir
+  };
+
   // Preflight adapter safety before writing outputs.
-  symlinks.forEach((name) => {
-    if (!isSafeAdapterFilename(name)) {
-      throw new Error(`Invalid adapter filename: ${name}`);
-    }
-    const linkPath = path.join(root, name);
-    if (!fs.existsSync(linkPath)) return;
-    let safe = false;
-    try {
-      if (isManagedSymlink(linkPath, agentsMdPath)) {
-        safe = true;
-      } else {
-        safe = isManagedCopy(linkPath);
-      }
-    } catch {
-      safe = false;
-    }
-    if (!safe && !adapters.force) {
-      throw new Error(`Won't overwrite ${name} -- it wasn't created by Sidekick. Set adapters.force to override.`);
-    }
-  });
-
-  if (adapters.aiderConf) {
-    const aiderPath = path.join(root, ".aider.conf.yml");
-    const desired = "read: AGENTS.md\n";
-    if (fs.existsSync(aiderPath) && normalizeNewlines(fs.readFileSync(aiderPath, "utf8")) !== normalizeNewlines(desired)) {
-      if (!adapters.force) {
-        throw new Error("Existing .aider.conf.yml wasn't created by Sidekick. Set adapters.force to override.");
-      }
-    }
-  }
-
-  if (adapters.geminiSettings) {
-    const geminiDir = path.join(root, ".gemini");
-    if (fs.existsSync(geminiDir) && !fs.statSync(geminiDir).isDirectory()) {
-      throw new Error(".gemini exists but isn't a directory.");
-    }
-    const settingsPath = path.join(geminiDir, "settings.json");
-    if (fs.existsSync(settingsPath)) {
-      const raw = fs.readFileSync(settingsPath, "utf8");
-      if (!isManagedGeminiSettingsContent(raw) && !adapters.force) {
-        throw new Error("Existing .gemini/settings.json wasn't created by Sidekick. Set adapters.force to override.");
-      }
-    }
-  }
+  enabledAdapters.forEach((adapter) => adapter.preflight(adapterContext));
 
   if (needsAgentsMd) {
     if (fs.existsSync(agentsMdPath) && !normalizeNewlines(fs.readFileSync(agentsMdPath, "utf8")).includes("<!-- sidekick:generated -->") && !adapters.force) {
@@ -705,75 +680,7 @@ function writeAgentsOutputs(root, config, modules) {
   }
   writeLockFile(root, modules);
 
-  symlinks.forEach((name) => {
-    if (!isSafeAdapterFilename(name)) {
-      throw new Error(`Invalid adapter filename: ${name}`);
-    }
-    const linkPath = path.join(root, name);
-    const existing = fs.existsSync(linkPath);
-    if (existing) {
-      let isSafe = false;
-      try {
-        if (isManagedSymlink(linkPath, agentsMdPath)) {
-          isSafe = true;
-        } else if (normalizeNewlines(fs.readFileSync(linkPath, "utf8")) === normalizeNewlines(agentsContent)) {
-          isSafe = true;
-        } else if (prevAgentsContent != null && normalizeNewlines(fs.readFileSync(linkPath, "utf8")) === normalizeNewlines(prevAgentsContent)) {
-          isSafe = true;
-        }
-      } catch {
-        isSafe = false;
-      }
-      if (!isSafe && !adapters.force) {
-        throw new Error(`Won't overwrite ${name} -- it wasn't created by Sidekick. Set adapters.force to override.`);
-      }
-      try {
-        fs.unlinkSync(linkPath);
-      } catch (err) {
-        if (!err || err.code !== "ENOENT") {
-          throw err;
-        }
-      }
-    }
-    try {
-      fs.symlinkSync("AGENTS.md", linkPath);
-    } catch (err) {
-      try {
-        fs.copyFileSync(agentsMdPath, linkPath);
-      } catch (copyErr) {
-        throw new Error(`Failed to create adapter ${name}: ${copyErr.message}`);
-      }
-    }
-  });
-
-  if (adapters.aiderConf) {
-    const aiderPath = path.join(root, ".aider.conf.yml");
-    const desired = "read: AGENTS.md\n";
-    if (fs.existsSync(aiderPath) && normalizeNewlines(fs.readFileSync(aiderPath, "utf8")) !== normalizeNewlines(desired)) {
-      if (!adapters.force) {
-        throw new Error("Existing .aider.conf.yml wasn't created by Sidekick. Set adapters.force to override.");
-      }
-    }
-    fs.writeFileSync(aiderPath, desired);
-  }
-
-  if (adapters.geminiSettings) {
-    const geminiDir = path.join(root, ".gemini");
-    const settingsPath = path.join(geminiDir, "settings.json");
-    const desiredObject = { context: { fileName: "AGENTS.md" } };
-    const desired = JSON.stringify(desiredObject, null, 2) + "\n";
-    if (fs.existsSync(settingsPath)) {
-      const raw = fs.readFileSync(settingsPath, "utf8");
-      if (!isManagedGeminiSettingsContent(raw) && !adapters.force) {
-        throw new Error("Existing .gemini/settings.json wasn't created by Sidekick. Set adapters.force to override.");
-      }
-    }
-    if (fs.existsSync(geminiDir) && !fs.statSync(geminiDir).isDirectory()) {
-      throw new Error(".gemini exists but isn't a directory.");
-    }
-    ensureDir(geminiDir);
-    fs.writeFileSync(settingsPath, desired);
-  }
+  enabledAdapters.forEach((adapter) => adapter.write(adapterContext));
 }
 
 function loadTelemetry(root) {
