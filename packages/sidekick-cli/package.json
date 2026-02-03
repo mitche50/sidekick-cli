@@ -1,0 +1,38 @@
+{
+  "name": "@mitche50/sidekick-cli",
+  "version": "0.1.0",
+  "bin": {
+    "sidekick": "bin/sidekick.js",
+    "sk": "bin/sidekick.js"
+  },
+  "description": "Your agent's context compiler -- builds AGENTS.md from modular playbooks and skills",
+  "dependencies": {
+    "@mitche50/sidekick-core": "0.1.0"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mitche50/sidekick-cli.git",
+    "directory": "packages/sidekick-cli"
+  },
+  "bugs": {
+    "url": "https://github.com/mitche50/sidekick-cli/issues"
+  },
+  "homepage": "https://github.com/mitche50/sidekick-cli#readme",
+  "keywords": [
+    "sidekick",
+    "agents",
+    "AGENTS.md",
+    "cli",
+    "context-compiler",
+    "playbooks",
+    "ai-coding",
+    "telemetry"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
