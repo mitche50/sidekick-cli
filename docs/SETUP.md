@@ -1,90 +1,95 @@
 # Setup and storage
 
-This repo is structured so you can:
+This repo gives you:
 
-- **Version control** your skills with GitHub
-- **Install once** and use them across all codebases (personal skills)
-- **Optionally** copy/symlink a subset into specific projects
+- **Version-controlled skills** via GitHub
+- **One install, every codebase** (personal skills directory)
+- **Optional per-project overrides** via symlinks or copies
+- **Compiled AGENTS.md** via Sidekick, so your agents always have context
 
 ---
+
+## 0) Sidekick (the context compiler)
+
+Sidekick assembles `AGENTS.md` and a compact index from your selected modules:
+
+```bash
+node ~/.agents/skills/packages/sidekick-cli/bin/sidekick.js init
+node ~/.agents/skills/packages/sidekick-cli/bin/sidekick.js add planning-before-implementation
+node ~/.agents/skills/packages/sidekick-cli/bin/sidekick.js build
+```
+
+This creates:
+```
+AGENTS.md                  <- compiled guidance
+AGENT.md                   <- symlink adapter
+GEMINI.md                  <- symlink adapter
+.aider.conf.yml            <- Aider adapter
+.gemini/settings.json      <- Gemini adapter
+.sidekick/
+  config.json
+  sidekick.lock.json
+  index.min.txt
+  telemetry/
+```
 
 ## 1) What a Skill is
 
-A Skill is a **directory** containing a required entry file (`SKILL.md`) plus optional supporting files like:
+A Skill is a **directory** containing a required entry file (`SKILL.md`) plus optional supporting files:
 
-- `examples/` — sample inputs/outputs
-- `templates/` — templates Claude can fill in
-- `scripts/` — scripts Claude can execute (optional; use carefully)
+- `examples/` -- sample inputs/outputs
+- `templates/` -- templates an agent can fill in
 
-Claude primarily uses the `name` + `description` fields in YAML frontmatter to decide when a skill is relevant.
-When invoked, Claude reads the full markdown body and can explore linked supporting files.
+Agents use the `name` + `description` fields in YAML frontmatter to decide when a skill is relevant.
+When invoked, an agent reads the full markdown body and can explore linked supporting files.
 
 ---
 
-## 2) Where skills live (Claude Code)
+## 2) Where skills live
 
-Claude Code supports multiple locations; choose the one that matches your goal:
+Agents that support `SKILL.md` discovery look in these locations:
 
-- **Personal (recommended for “all codebases”)**
-  - `~/.claude/skills/<skill-name>/SKILL.md`
+- **Personal (recommended)**
+  - `~/.agents/skills/<skill-name>/SKILL.md`
   - Available across all your projects.
 
-- **Project**
-  - `.claude/skills/<skill-name>/SKILL.md`
-  - Only applies to that repo.
+- **Project-local**
+  - `.agents/skills/<skill-name>/SKILL.md`
+  - Scoped to that repo.
 
 - **Monorepo packages**
-  - Claude Code can discover nested `.claude/skills/` directories relative to where you're working (e.g., `packages/frontend/.claude/skills/`).
+  - Agents can discover nested `.agents/skills/` directories relative to where you're working.
 
-If the same skill name exists in multiple levels, higher-priority locations win.
+Sidekick resolves modules in this order by default:
 
----
+1. `./.agents/skills`
+2. `~/.agents/skills`
+3. Project root
 
-## 3) How to install this repo
+Override with `moduleDirs` in `.sidekick/config.json`.
 
-### Option A — Clone into the personal skills directory (recommended)
+To override the kernel template per project, add `templates/agents-md/kernel.md` at the repo root.
 
-```bash
-mkdir -p ~/.claude
-git clone <YOUR_GITHUB_REPO_URL> ~/.claude/skills
-```
-
-### Option B — Clone anywhere + install via script
-
-```bash
-git clone <YOUR_GITHUB_REPO_URL> ~/ai/claude-skills
-cd ~/ai/claude-skills
-python3 scripts/install.py --dest ~/.claude/skills --mode symlink
-```
+If the same skill name exists at multiple levels, the higher-priority location wins.
 
 ---
 
-## 4) Uploading skills to Claude Web/Desktop
+## 3) Installing this repo
 
-Claude Web/Desktop uses ZIP uploads:
-
-- Zip **the skill folder**, not just its contents.
-- The zip must contain the skill folder at the root.
-
-This repo includes a packager:
+### Clone into the personal skills directory (recommended)
 
 ```bash
-python3 scripts/package.py --all
-# output: ./dist/<skill-name>.zip
+mkdir -p ~/.agents
+git clone https://github.com/mitche50/sidekick-cli ~/.agents/skills
 ```
-
-Then upload each zip in Claude Settings → Capabilities → Skills.
 
 ---
 
-## 5) Recommended day-to-day workflow
+## 4) Day-to-day workflow
 
 - Edit skills in this repo
-- Validate + regenerate the index
-- Package to `dist/` when you need zips to upload/share
+- Rebuild `AGENTS.md` in any repo that consumes these modules:
 
 ```bash
-python3 scripts/validate.py
-python3 scripts/generate_index.py
-python3 scripts/package.py --all
+node ~/.agents/skills/packages/sidekick-cli/bin/sidekick.js build
 ```

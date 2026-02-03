@@ -1,22 +1,23 @@
 # Troubleshooting
 
 ## Skill isn't triggering automatically
-- Ensure `SKILL.md` exists and has valid YAML frontmatter.
-- Make the `description` more specific and include likely user keywords.
-- Try invoking directly using the slash command: `/<name>`.
+- Confirm `SKILL.md` exists and has valid YAML frontmatter.
+- Make the `description` more specific -- include the keywords a user would actually say.
+- Try invoking it directly: `/<name>`.
 
 ## Skill triggers too often
 - Narrow the `description` (remove overly broad terms).
-- Add negative triggers or clearer “Use when” guidance in the body.
+- Add clearer "Use when" guidance in the body, or add negative triggers.
 
-## Claude can’t see my skills
-- Confirm the skill folder lives in one of the supported locations:
-  - personal: `~/.claude/skills/<skill-name>/SKILL.md`
-  - project: `.claude/skills/<skill-name>/SKILL.md`
-- Validate with `python3 scripts/validate.py`.
+## Agent can't find my skills
+- Check that the skill folder lives in a supported location:
+  - Personal: `~/.agents/skills/<skill-name>/SKILL.md`
+  - Project: `.agents/skills/<skill-name>/SKILL.md`
+- Run `sidekick report` to confirm modules are being detected.
 
-## ZIP upload fails
-- Ensure the ZIP contains the **folder** at the root:
-  - correct: `my-skill.zip -> my-skill/SKILL.md`
-  - incorrect: `my-skill.zip -> SKILL.md` at ZIP root
-- Rebuild zips with `python3 scripts/package.py --all`.
+## Build fails with budget exceeded
+- Your compiled kernel or index is too large. Check `budgets` in `.sidekick/config.json`.
+- The error message lists the largest offenders -- trim those kernel snippets first.
+
+## Adapter won't overwrite
+- Sidekick won't clobber files it didn't create. Set `adapters.force: true` in your config if you want to override.

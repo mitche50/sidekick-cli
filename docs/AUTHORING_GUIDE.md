@@ -1,6 +1,6 @@
 # Authoring guide
 
-This repo follows a few conventions to keep skills discoverable, maintainable, and safe to share.
+A few conventions to keep skills discoverable, maintainable, and safe to share.
 
 ---
 
@@ -8,13 +8,13 @@ This repo follows a few conventions to keep skills discoverable, maintainable, a
 
 - One skill = one folder at repo root (e.g., `planning-before-implementation/`)
 - Each skill folder **must** contain `SKILL.md`
-- Optional: `examples/`, `templates/`, `scripts/`, `resources/`
+- Optional: `examples/`, `templates/`, `resources/`
 
 ---
 
 ## YAML frontmatter (required)
 
-At the very top of `SKILL.md`:
+At the top of `SKILL.md`:
 
 ```yaml
 ---
@@ -23,38 +23,38 @@ description: <what it does + when to use it>
 ---
 ```
 
-Guidelines:
+Tips:
 
-- `name` should match the folder name
-- Use lowercase letters, numbers, and hyphens only
-- Keep `description` short, specific, and “trigger rich” (include keywords users are likely to say)
+- `name` should match the folder name exactly
+- Lowercase letters, numbers, and hyphens only
+- Keep `description` short, specific, and trigger-rich -- include the keywords a user is likely to say when they need this skill
 
 ---
 
 ## Write for progressive disclosure
 
-Claude reads:
+Agents read your skill in layers:
 
-1. **Frontmatter first** (`name`, `description`) for discovery
-2. **Body next** (instructions) if the skill is relevant
-3. **Supporting files** only if referenced and needed
+1. **Frontmatter first** (`name`, `description`) -- for discovery
+2. **Body next** (instructions) -- if the skill matches
+3. **Supporting files** -- only if referenced and needed
 
-Design your skill so the first ~30 lines explain:
-- what the skill does
-- when to use it
-- what inputs it needs
-- what output format it should produce
+Design the first ~30 lines of your skill to cover:
+- What it does
+- When to use it
+- What inputs it needs
+- What output format to produce
 
 ---
 
-## Examples help more than prose
+## Examples beat prose
 
 Put at least one realistic example in `examples/`:
 
 - `examples/example-1.input.md`
 - `examples/example-1.output.md`
 
-Then reference them from `SKILL.md`, e.g.:
+Reference them from `SKILL.md`:
 
 > See `examples/example-1.output.md` for the desired structure and tone.
 
@@ -64,14 +64,14 @@ Then reference them from `SKILL.md`, e.g.:
 
 If your skill suggests commands:
 
-- Prefer read-only commands first (`git status`, `git diff`, `ls`)
-- Avoid destructive commands unless explicitly requested
-- When relevant, include a “rollback” section
+- Start with read-only commands (`git status`, `git diff`, `ls`)
+- Avoid destructive operations unless explicitly requested
+- Include a "rollback" section when relevant
 
 ---
 
 ## Keep skills focused
 
-Avoid “kitchen sink” skills. If you notice a skill growing too large:
-- extract supporting documentation into `docs/` inside the skill folder
-- or split into multiple skills with clearer triggers
+Avoid "kitchen sink" skills. If a skill is growing too large:
+- Extract supporting docs into `docs/` inside the skill folder
+- Or split into multiple skills with clearer triggers

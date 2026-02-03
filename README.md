@@ -1,83 +1,252 @@
-# Claude Skills — Personal Repo
+# Sidekick
 
-This repository is designed to be your **single, version-controlled “skills folder”** that you can use across all your codebases.
+Your agent's always-on cheat sheet. Sidekick compiles the playbooks, rules, and context your AI coding agents need -- so they stop guessing and start consulting.
 
-It ships with a starter set of engineering workflow skills (parallelization, planning, prompt improvement, bug-fixing loops, etc.) and includes helper scripts to validate, index, and package skills for upload.
+Think of it as a context compiler: you write modular skills and playbooks, Sidekick assembles them into a single `AGENTS.md` that every major AI coding tool can read. One build, every agent, always up to date.
 
----
-
-## Quick start (recommended)
-
-### Option A — Make this your personal skills folder
-Clone this repo into your Claude personal skills directory:
-
-```bash
-mkdir -p ~/.claude
-git clone <YOUR_GITHUB_REPO_URL> ~/.claude/skills
-```
-
-Claude Code will treat each subfolder that contains a `SKILL.md` as an available skill.
-
-### Option B — Keep it anywhere + install via symlinks/copy
-If you’d rather keep the repo elsewhere:
-
-```bash
-python3 scripts/install.py --dest ~/.claude/skills --mode symlink
-```
-
-Use `--mode copy` if symlinks aren’t desired/available.
+This repo is the Sidekick library and toolchain:
+- A curated set of skills and playbooks (each folder with `SKILL.md`).
+- A minimal CLI that compiles `AGENTS.md` and a compact lookup index.
+- Telemetry hooks so you can see which playbooks your agents actually used.
 
 ---
 
-## Included skills
+## Quick start
 
-- `automating-bug-fixes` — Drives an autonomous bug-fix loop from logs or failing tests to a patch, minimizing micromanagement and emphasizing verification.
-- `delegating-subagents` — Decomposes complex tasks into parallel subagent work across separate LLM sessions, then synthesizes results and runs a gatekeeper review.
-- `developing-reusable-commands` — Turns repeated LLM or router workflows into reusable local CLI commands or scripts with docs, safe defaults, and examples.
-- `explaining-and-quizzing` — Switches into teaching mode by explaining changes, generating diagrams, and running spaced-repetition quizzes while storing learnings locally.
-- `improving-prompts` — Iteratively improves prompts and specs using critique, stricter acceptance criteria, and rewrite cycles to raise output quality.
-- `integrating-local-data-tools` — Integrates local data and analytics CLIs (sqlite3, jq, csv tools) via scripted wrappers so analysis is reproducible and safe-by-default.
-- `maintaining-local-knowledge-base` — Captures lessons learned into a persistent, version-controlled knowledge base and suggests how to inject it into prompts.
-- `optimizing-terminal-environment` — Suggests terminal, tmux, and shell ergonomics to speed task switching across worktrees and LLM sessions in local dev workflows.
-- `parallelizing-workflows` — Guides parallel coding using git worktrees or clones and isolated LLM sessions per task to reduce context bleed.
-- `planning-before-implementation` — Produces a plan-first workflow (plan, review, execute, re-plan) for complex tasks before making code changes.
+### Install the CLI
+
+```bash
+npm install -g @mitche50/sidekick-cli
+```
+
+### Install the module library
+
+Clone Sidekick into your global skills directory so every project can find modules:
+
+```bash
+mkdir -p ~/.agents
+git clone https://github.com/mitche50/sidekick-cli ~/.agents/skills
+```
+
+### Local development (no publish)
+
+```bash
+node ~/.agents/skills/packages/sidekick-cli/bin/sidekick.js init
+node ~/.agents/skills/packages/sidekick-cli/bin/sidekick.js add planning-before-implementation
+node ~/.agents/skills/packages/sidekick-cli/bin/sidekick.js build
+```
+
+### Publish (optional)
+
+Packages are scoped to `@mitche50`. Publish from the package directories (the repo root is private).
+
+```bash
+cd packages/sidekick-core
+npm publish --access public
+cd ../sidekick-cli
+npm publish --access public
+```
+
+Or in one shot:
+
+```bash
+npm run publish:all
+```
+
+### Use Sidekick in a project
+
+From any repo where you want your agents to have context:
+
+```bash
+sidekick init
+sidekick add planning-before-implementation
+sidekick build
+```
+
+This creates:
+```
+AGENTS.md                  <- the compiled guidance your agents read
+AGENT.md                   <- symlink (for tools that expect this name)
+GEMINI.md                  <- symlink (for Gemini)
+.aider.conf.yml            <- adapter for Aider
+.gemini/settings.json      <- adapter for Gemini settings
+.sidekick/
+  config.json              <- your project config
+  sidekick.lock.json       <- integrity lock
+  index.min.txt            <- compact module index
+  telemetry/               <- local usage logs
+```
+
+### Module discovery
+
+Sidekick looks for modules in this order:
+
+1. `./.agents/skills` (project-local)
+2. `~/.agents/skills` (global)
+3. Project root
+
+Override with `moduleDirs` in `.sidekick/config.json`.
+
+---
+
+## CLI commands
+
+```text
+sidekick init
+sidekick build
+sidekick add <module>
+sidekick remove <module>
+sidekick report
+sidekick trace module <name> --files <paths>
+sidekick run -- <command>
+sidekick promote [module] [--top N] [--dry-run]
+```
+
+**What they do:**
+- `init` -- creates `.sidekick/config.json` and the telemetry folder.
+- `build` -- compiles `AGENTS.md`, the index, the lockfile, and all adapters.
+- `add` / `remove` -- loads or unloads a module from your config.
+- `report` -- shows which modules your agents consulted vs. which they should have.
+- `trace` -- manually logs that a module was used.
+- `run` -- wraps an agent command and enforces source tracking.
+- `promote` -- lifts frequently-missed kernel rules into your project template.
+
+---
+
+## Adapters (generated by default)
+
+Sidekick writes small compatibility files so every AI tool reads the same `AGENTS.md` without extra setup:
+
+| File | Purpose |
+|---|---|
+| `AGENT.md` | Symlink to `AGENTS.md` |
+| `GEMINI.md` | Symlink to `AGENTS.md` |
+| `.aider.conf.yml` | `read: AGENTS.md` |
+| `.gemini/settings.json` | Points Gemini at `AGENTS.md` |
+
+Disable or customize adapters in `.sidekick/config.json`.
+Set `adapters.force` to `true` if you want Sidekick to overwrite existing adapter files it didn't create.
+
+---
+
+## Source tracking (optional wrapper)
+
+Want to know if your agent actually read its playbook? Wrap the run:
+
+```bash
+sidekick run -- <agent-command>
+```
+
+The wrapper looks for a `Sources consulted: ...` line in the agent's output. If the agent doesn't cite sources, the run fails (use `--allow-missing` to be lenient).
+
+For local dev without a global install:
+```bash
+node ~/.agents/skills/packages/sidekick-cli/bin/sidekick.js run -- <agent-command>
+```
+
+---
+
+## Configuration
+
+Sidekick reads `.sidekick/config.json` in each project. Created on `sidekick init`.
+
+```json
+{
+  "version": 1,
+  "modules": ["planning-before-implementation"],
+  "moduleDirs": ["./.agents/skills", "~/.agents/skills", "."],
+  "adapters": {
+    "agentsMd": true,
+    "symlinkFiles": ["AGENT.md", "GEMINI.md"],
+    "aiderConf": true,
+    "geminiSettings": true,
+    "force": false
+  },
+  "budgets": {
+    "agentsMdKernelMaxBytes": 10000,
+    "indexMaxBytes": 12000
+  },
+  "telemetry": {
+    "enabled": true,
+    "mode": "local"
+  }
+}
+```
+
+**Key settings:**
+- `moduleDirs` -- ordered search path for modules.
+- `adapters.force` -- set to `true` to overwrite files Sidekick didn't create.
+- `budgets` -- hard limits. Builds fail if exceeded (your agent's context window will thank you).
+- `telemetry.mode` -- currently `local` only.
+- Override the kernel template per project by adding `templates/agents-md/kernel.md` at the repo root.
+- `AGENTS.md` is always written when any adapter is enabled (symlinks and configs depend on it).
+- On Windows, some commands may need `sidekick run -- cmd /c <command>` for quoting or shell built-ins.
+
+---
+
+## Promote rules
+
+Telemetry showing repeated misses? Promote a module's kernel rules into your project template so they're always on:
+
+```bash
+sidekick promote
+```
+
+This picks the least-consulted module and promotes up to 5 rules from its `snippets/kernel.md` into `templates/agents-md/kernel.md`. Target a specific module:
+
+```bash
+sidekick promote planning-before-implementation --top 7
+```
+
+Use `--dry-run` to preview without writing.
+
+---
+
+## Module structure
+
+Each skill folder is compatible with agent skills workflows and includes Sidekick metadata:
+
+```
+<module-name>/
+  SKILL.md                 <- agent-facing skill definition
+  sidekick.module.json     <- module manifest
+  playbook.md              <- detailed guidance
+  snippets/
+    kernel.md              <- rules compiled into AGENTS.md
+```
+
+The CLI reads `sidekick.module.json` to locate playbooks and kernel snippets.
+Define `triggers` in the manifest to control when a module appears in reports.
 
 ---
 
 ## Repo layout
 
-- `/<skill-name>/SKILL.md` — one folder per skill
-- `/docs/` — setup + authoring guidance
-- `/scripts/` — utilities to validate, index, install, and package skills
-- `/dist/` — build output (zips); ignored by git
+```
+/<skill-name>/SKILL.md     -- one folder per skill
+/packages/sidekick-cli     -- the CLI
+/packages/sidekick-core    -- compiler internals
+/templates/agents-md       -- default AGENTS.md kernel template
+/docs                      -- setup, authoring, troubleshooting
+CHANGELOG.md               -- release history
+```
 
 ---
 
 ## Common workflows
 
-### Validate skills
+### Build AGENTS.md for this repo
 ```bash
-python3 scripts/validate.py
+sidekick init
+sidekick add planning-before-implementation
+sidekick build
 ```
-
-### Regenerate `INDEX.md`
-```bash
-python3 scripts/generate_index.py
-```
-
-### Package skills for upload to Claude Web/Desktop
-```bash
-python3 scripts/package.py --all
-# zips appear in ./dist
-```
-
-Upload individual skill zips via Claude Settings → Capabilities → Skills → “Upload skill”.
 
 ---
 
 ## Adding a new skill
 
-1. Create a new folder at repo root:
+1. Create a folder at repo root:
    ```bash
    mkdir -p my-new-skill
    ```
@@ -85,24 +254,13 @@ Upload individual skill zips via Claude Settings → Capabilities → Skills →
    ```md
    ---
    name: my-new-skill
-   description: One sentence describing what it does and when to use it.
+   description: One sentence -- what it does and when to use it.
    ---
    ```
-3. Add optional supporting files (examples, templates, scripts).
-4. Run:
-   ```bash
-   python3 scripts/validate.py
-   python3 scripts/generate_index.py
-   ```
+3. Add Sidekick files:
+   - `sidekick.module.json`
+   - `playbook.md`
+   - `snippets/kernel.md`
+4. Run `sidekick build` in any consuming repo to pick up the new module.
 
 See `docs/AUTHORING_GUIDE.md` for conventions.
-
----
-
-## Notes on scope
-
-- **Personal skills** apply to all projects.
-- **Project skills** live at `.claude/skills/<skill-name>/SKILL.md` inside a repo.
-- In monorepos, nested `.claude/skills/` folders can be discovered relative to where you’re working.
-
-See `docs/SETUP.md` for details.

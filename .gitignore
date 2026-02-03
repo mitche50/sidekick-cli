@@ -1,17 +1,9 @@
-# Build outputs
-dist/
-*.zip
-
-# Python
-__pycache__/
-*.pyc
-*.pyo
-*.pyd
-.venv/
-venv/
-
 # Node
 node_modules/
+
+# Sidekick
+.sidekick/telemetry/
+.sidekick/index.min.txt
 
 # OS / editor
 .DS_Store
