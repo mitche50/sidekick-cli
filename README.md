@@ -11,6 +11,17 @@ This repo is the Sidekick library and toolchain:
 
 ---
 
+## Why Sidekick (vs. manual skills)?
+
+Manual skills are powerful, but they’re easy to forget, hard to keep consistent, and tricky to audit. Sidekick turns them into a reliable system that doesn’t require a clipboard and a prayer.
+
+- **Always-on context**: compiles the right pieces into a single `AGENTS.md` so critical rules aren’t missed.
+- **Deterministic visibility**: optional wrapper enforces “Sources consulted” for reliable usage tracking.
+- **Budgeted + indexed**: keeps context small and searchable instead of a growing pile of files.
+- **Safe adapters**: one source of truth, many tools (Aider, Gemini, etc.) without duplicate maintenance.
+
+---
+
 ## Quick start
 
 ### Install the CLI
@@ -126,6 +137,7 @@ Sidekick writes small compatibility files so every AI tool reads the same `AGENT
 
 Disable or customize adapters in `.sidekick/config.json`.
 Set `adapters.force` to `true` if you want Sidekick to overwrite existing adapter files it didn't create.
+Adapters are implemented via a small registry in core so new adapters follow the same safety + preflight pattern. See `CONTRIBUTING.md` for the short adapter checklist.
 
 ---
 
