@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "name": "parallelizing-workflows",
+  "description": "Guides parallel coding using git worktrees or clones and isolated LLM sessions per task to reduce context bleed.",
+  "type": "playbook",
+  "entrypoints": {
+    "playbook": "playbook.md",
+    "kernel": "snippets/kernel.md",
+    "skill": "SKILL.md"
+  },
+  "triggers": []
+}

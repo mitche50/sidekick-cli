@@ -1,0 +1,3 @@
+- Use this playbook when the task matches: Turns repeated LLM or router workflows into reusable local CLI commands or scripts with docs, safe defaults, and examples.
+- Read `developing-reusable-commands/playbook.md` and follow its steps in order.
+- Record usage with `sidekick trace module developing-reusable-commands --files <paths>` when applied.

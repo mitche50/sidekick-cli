@@ -1,0 +1,3 @@
+- Use this playbook when the task matches: Drives an autonomous bug-fix loop from logs or failing tests to a patch, minimizing micromanagement and emphasizing verification.
+- Read `automating-bug-fixes/playbook.md` and follow its steps in order.
+- Record usage with `sidekick trace module automating-bug-fixes --files <paths>` when applied.

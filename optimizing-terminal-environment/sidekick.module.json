@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "name": "optimizing-terminal-environment",
+  "description": "Suggests terminal, tmux, and shell ergonomics to speed task switching across worktrees and LLM sessions in local dev workflows.",
+  "type": "playbook",
+  "entrypoints": {
+    "playbook": "playbook.md",
+    "kernel": "snippets/kernel.md",
+    "skill": "SKILL.md"
+  },
+  "triggers": []
+}

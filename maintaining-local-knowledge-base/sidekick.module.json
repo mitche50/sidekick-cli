@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "name": "maintaining-local-knowledge-base",
+  "description": "Captures lessons learned into a persistent, version-controlled knowledge base and suggests how to inject it into prompts.",
+  "type": "playbook",
+  "entrypoints": {
+    "playbook": "playbook.md",
+    "kernel": "snippets/kernel.md",
+    "skill": "SKILL.md"
+  },
+  "triggers": []
+}

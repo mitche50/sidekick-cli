@@ -1,0 +1,3 @@
+- Use this playbook when the task matches: Produces a plan-first workflow (plan, review, execute, re-plan) for complex tasks before making code changes.
+- Read `planning-before-implementation/playbook.md` and follow its steps in order.
+- Record usage with `sidekick trace module planning-before-implementation --files <paths>` when applied.

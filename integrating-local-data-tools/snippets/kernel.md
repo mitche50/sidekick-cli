@@ -1,0 +1,3 @@
+- Use this playbook when the task matches: Integrates local data and analytics CLIs (sqlite3, jq, csv tools) via scripted wrappers so analysis is reproducible and safe-by-default.
+- Read `integrating-local-data-tools/playbook.md` and follow its steps in order.
+- Record usage with `sidekick trace module integrating-local-data-tools --files <paths>` when applied.

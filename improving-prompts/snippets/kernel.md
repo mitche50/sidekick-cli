@@ -1,0 +1,3 @@
+- Use this playbook when the task matches: Iteratively improves prompts and specs using critique, stricter acceptance criteria, and rewrite cycles to raise output quality.
+- Read `improving-prompts/playbook.md` and follow its steps in order.
+- Record usage with `sidekick trace module improving-prompts --files <paths>` when applied.

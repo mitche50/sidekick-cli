@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "name": "integrating-local-data-tools",
+  "description": "Integrates local data and analytics CLIs (sqlite3, jq, csv tools) via scripted wrappers so analysis is reproducible and safe-by-default.",
+  "type": "playbook",
+  "entrypoints": {
+    "playbook": "playbook.md",
+    "kernel": "snippets/kernel.md",
+    "skill": "SKILL.md"
+  },
+  "triggers": []
+}

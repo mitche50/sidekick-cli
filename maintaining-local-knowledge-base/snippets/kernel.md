@@ -1,0 +1,3 @@
+- Use this playbook when the task matches: Captures lessons learned into a persistent, version-controlled knowledge base and suggests how to inject it into prompts.
+- Read `maintaining-local-knowledge-base/playbook.md` and follow its steps in order.
+- Record usage with `sidekick trace module maintaining-local-knowledge-base --files <paths>` when applied.

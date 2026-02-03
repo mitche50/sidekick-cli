@@ -1,0 +1,3 @@
+- Use this playbook when the task matches: Guides parallel coding using git worktrees or clones and isolated LLM sessions per task to reduce context bleed.
+- Read `parallelizing-workflows/playbook.md` and follow its steps in order.
+- Record usage with `sidekick trace module parallelizing-workflows --files <paths>` when applied.

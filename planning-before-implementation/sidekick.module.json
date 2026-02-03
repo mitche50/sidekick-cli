@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "name": "planning-before-implementation",
+  "description": "Produces a plan-first workflow (plan, review, execute, re-plan) for complex tasks before making code changes.",
+  "type": "playbook",
+  "entrypoints": {
+    "playbook": "playbook.md",
+    "kernel": "snippets/kernel.md",
+    "skill": "SKILL.md"
+  },
+  "triggers": []
+}

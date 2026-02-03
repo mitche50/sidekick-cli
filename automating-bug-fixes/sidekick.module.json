@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "name": "automating-bug-fixes",
+  "description": "Drives an autonomous bug-fix loop from logs or failing tests to a patch, minimizing micromanagement and emphasizing verification.",
+  "type": "playbook",
+  "entrypoints": {
+    "playbook": "playbook.md",
+    "kernel": "snippets/kernel.md",
+    "skill": "SKILL.md"
+  },
+  "triggers": []
+}

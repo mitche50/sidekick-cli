@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "name": "improving-prompts",
+  "description": "Iteratively improves prompts and specs using critique, stricter acceptance criteria, and rewrite cycles to raise output quality.",
+  "type": "playbook",
+  "entrypoints": {
+    "playbook": "playbook.md",
+    "kernel": "snippets/kernel.md",
+    "skill": "SKILL.md"
+  },
+  "triggers": []
+}

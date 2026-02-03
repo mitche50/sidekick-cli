@@ -1,0 +1,3 @@
+- Use this playbook when the task matches: Suggests terminal, tmux, and shell ergonomics to speed task switching across worktrees and LLM sessions in local dev workflows.
+- Read `optimizing-terminal-environment/playbook.md` and follow its steps in order.
+- Record usage with `sidekick trace module optimizing-terminal-environment --files <paths>` when applied.

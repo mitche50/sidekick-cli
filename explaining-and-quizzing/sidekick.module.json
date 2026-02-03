@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "name": "explaining-and-quizzing",
+  "description": "Switches into teaching mode by explaining changes, generating diagrams, and running spaced-repetition quizzes while storing learnings locally.",
+  "type": "playbook",
+  "entrypoints": {
+    "playbook": "playbook.md",
+    "kernel": "snippets/kernel.md",
+    "skill": "SKILL.md"
+  },
+  "triggers": []
+}

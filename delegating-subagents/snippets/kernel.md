@@ -1,0 +1,3 @@
+- Use this playbook when the task matches: Decomposes complex tasks into parallel subagent work across separate LLM sessions, then synthesizes results and runs a gatekeeper review.
+- Read `delegating-subagents/playbook.md` and follow its steps in order.
+- Record usage with `sidekick trace module delegating-subagents --files <paths>` when applied.

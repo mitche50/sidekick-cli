@@ -1,0 +1,3 @@
+- Use this playbook when the task matches: Switches into teaching mode by explaining changes, generating diagrams, and running spaced-repetition quizzes while storing learnings locally.
+- Read `explaining-and-quizzing/playbook.md` and follow its steps in order.
+- Record usage with `sidekick trace module explaining-and-quizzing --files <paths>` when applied.
