@@ -15,6 +15,10 @@ function runNode(args, cwd = tempDir) {
   });
 }
 
+function jsString(value) {
+  return JSON.stringify(value);
+}
+
 function assert(condition, message) {
   if (!condition) {
     console.error(message);
@@ -94,8 +98,8 @@ try {
 }
 
 // Positive: run wrapper with Sources consulted
-const sourcePath = path.join(root, "skills", "planning-before-implementation", "playbook.md").replace(/\\/g, "\\\\");
-result = runNode(["run", "--", "node", "-e", `console.log("Sources consulted: ${sourcePath}")`]);
+const sourcePath = path.join(root, "skills", "planning-before-implementation", "playbook.md");
+result = runNode(["run", "--", "node", "-e", `console.log("Sources consulted: " + ${jsString(sourcePath)})`]);
 assert(result.status === 0, "run wrapper should succeed when Sources consulted is present");
 
 // Negative: missing Sources consulted should fail
@@ -107,17 +111,17 @@ result = runNode(["run", "--", "node", "-e", "console.log('Sources consulted: /t
 assert(result.status !== 0, "run wrapper should fail when Sources consulted does not map to modules");
 
 // Negative: nonexistent path inside module should fail
-const nonexistentInsideModule = path.join(root, "skills", "planning-before-implementation", "missing.md").replace(/\\/g, "\\\\");
-result = runNode(["run", "--", "node", "-e", `console.log("Sources consulted: ${nonexistentInsideModule}")`]);
+const nonexistentInsideModule = path.join(root, "skills", "planning-before-implementation", "missing.md");
+result = runNode(["run", "--", "node", "-e", `console.log("Sources consulted: " + ${jsString(nonexistentInsideModule)})`]);
 assert(result.status !== 0, "run wrapper should fail when Sources consulted points to a missing file inside a module");
 
 // Negative: mixed real + missing sources should fail
-const realPlaybook = path.join(root, "skills", "planning-before-implementation", "playbook.md").replace(/\\/g, "\\\\");
-result = runNode(["run", "--", "node", "-e", `console.log("Sources consulted: ${realPlaybook}, ${nonexistentInsideModule}")`]);
+const realPlaybook = path.join(root, "skills", "planning-before-implementation", "playbook.md");
+result = runNode(["run", "--", "node", "-e", `console.log("Sources consulted: " + ${jsString(realPlaybook)} + ", " + ${jsString(nonexistentInsideModule)})`]);
 assert(result.status !== 0, "run wrapper should fail when any Sources consulted path is missing");
 
 // Positive: allow-missing should pass even with missing sources
-result = runNode(["run", "--allow-missing", "--", "node", "-e", `console.log("Sources consulted: ${nonexistentInsideModule}")`]);
+result = runNode(["run", "--allow-missing", "--", "node", "-e", `console.log("Sources consulted: " + ${jsString(nonexistentInsideModule)})`]);
 assert(result.status === 0, "run wrapper should allow missing sources when --allow-missing is set");
 
 // Negative: budgets enforced
