@@ -23,6 +23,16 @@ function cliPath(value) {
   return value.replace(/\\/g, "/");
 }
 
+function writeSourcesScript(dir) {
+  const scriptPath = path.join(dir, "emit-sources.js");
+  fs.writeFileSync(
+    scriptPath,
+    'const src = process.env.SOURCES; if (src) console.log("Sources consulted: " + src);',
+    "utf8"
+  );
+  return scriptPath;
+}
+
 function assert(condition, message) {
   if (!condition) {
     console.error(message);
@@ -103,7 +113,13 @@ try {
 
 // Positive: run wrapper with Sources consulted
 const sourcePath = cliPath(path.join(root, "skills", "planning-before-implementation", "playbook.md"));
-result = runNode(["run", "--", "node", "-e", `console.log("Sources consulted: " + ${jsString(sourcePath)})`]);
+const sourcesScript = writeSourcesScript(tempDir);
+result = spawnSync("node", [sidekick, "run", "--", "node", sourcesScript], {
+  cwd: tempDir,
+  stdio: "pipe",
+  encoding: "utf8",
+  env: { ...process.env, SOURCES: sourcePath }
+});
 assert(result.status === 0, "run wrapper should succeed when Sources consulted is present");
 
 // Negative: missing Sources consulted should fail
@@ -116,16 +132,31 @@ assert(result.status !== 0, "run wrapper should fail when Sources consulted does
 
 // Negative: nonexistent path inside module should fail
 const nonexistentInsideModule = cliPath(path.join(root, "skills", "planning-before-implementation", "missing.md"));
-result = runNode(["run", "--", "node", "-e", `console.log("Sources consulted: " + ${jsString(nonexistentInsideModule)})`]);
+result = spawnSync("node", [sidekick, "run", "--", "node", sourcesScript], {
+  cwd: tempDir,
+  stdio: "pipe",
+  encoding: "utf8",
+  env: { ...process.env, SOURCES: nonexistentInsideModule }
+});
 assert(result.status !== 0, "run wrapper should fail when Sources consulted points to a missing file inside a module");
 
 // Negative: mixed real + missing sources should fail
 const realPlaybook = cliPath(path.join(root, "skills", "planning-before-implementation", "playbook.md"));
-result = runNode(["run", "--", "node", "-e", `console.log("Sources consulted: " + ${jsString(realPlaybook)} + ", " + ${jsString(nonexistentInsideModule)})`]);
+result = spawnSync("node", [sidekick, "run", "--", "node", sourcesScript], {
+  cwd: tempDir,
+  stdio: "pipe",
+  encoding: "utf8",
+  env: { ...process.env, SOURCES: `${realPlaybook}, ${nonexistentInsideModule}` }
+});
 assert(result.status !== 0, "run wrapper should fail when any Sources consulted path is missing");
 
 // Positive: allow-missing should pass even with missing sources
-result = runNode(["run", "--allow-missing", "--", "node", "-e", `console.log("Sources consulted: " + ${jsString(nonexistentInsideModule)})`]);
+result = spawnSync("node", [sidekick, "run", "--allow-missing", "--", "node", sourcesScript], {
+  cwd: tempDir,
+  stdio: "pipe",
+  encoding: "utf8",
+  env: { ...process.env, SOURCES: nonexistentInsideModule }
+});
 assert(result.status === 0, "run wrapper should allow missing sources when --allow-missing is set");
 
 // Negative: budgets enforced

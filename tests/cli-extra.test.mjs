@@ -448,7 +448,8 @@ describe("sidekick CLI extra coverage", () => {
       exitSpy = vi.spyOn(process, "exit").mockImplementation(() => {});
     });
 
-    afterEach(() => {
+    afterEach(async () => {
+      await flushTimers();
       exitSpy.mockRestore();
     });
 
