@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
 import { EventEmitter } from "node:events";
 import { PassThrough } from "node:stream";
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach, beforeAll, afterAll } from "vitest";
 import { makeTempDir, writeModule } from "./helpers.mjs";
 
 async function importCli(mocks = {}) {
@@ -67,6 +67,7 @@ async function withMockedCore(mockCore, fn) {
 describe("sidekick CLI extra coverage", () => {
   let cwd;
   let core;
+  let skipRestore = false;
   beforeEach(() => {
     cwd = process.cwd();
   });
@@ -76,12 +77,13 @@ describe("sidekick CLI extra coverage", () => {
     vi.spyOn(console, "error").mockImplementation(() => {});
     vi.spyOn(process.stdout, "write").mockImplementation(() => true);
     vi.spyOn(process.stderr, "write").mockImplementation(() => true);
-    vi.spyOn(process, "exit").mockImplementation(() => {});
     core = await import("../packages/sidekick-core/index.js");
   });
   afterEach(() => {
     process.chdir(cwd);
-    vi.restoreAllMocks();
+    if (!skipRestore) {
+      vi.restoreAllMocks();
+    }
   });
 
   it("uses fallback core require when package missing", async () => {
@@ -445,13 +447,20 @@ describe("sidekick CLI extra coverage", () => {
   describe("commandRun exit handling", () => {
     let exitSpy;
 
-    beforeEach(() => {
+    beforeAll(() => {
+      skipRestore = true;
       exitSpy = vi.spyOn(process, "exit").mockImplementation(() => {});
+    });
+
+    afterAll(async () => {
+      await flushTimers();
+      exitSpy.mockRestore();
+      skipRestore = false;
+      vi.restoreAllMocks();
     });
 
     afterEach(async () => {
       await flushTimers();
-      exitSpy.mockRestore();
     });
 
     it("commandRun handles stderr, tail sources, and signal exits", async () => {
