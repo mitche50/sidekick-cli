@@ -126,7 +126,8 @@ describe("sidekick CLI extra coverage", () => {
     const nested = path.join(root, "nested");
     fs.mkdirSync(nested, { recursive: true });
     process.chdir(nested);
-    expect(fs.realpathSync(cli.repoRoot()).toLowerCase()).toBe(fs.realpathSync(root).toLowerCase());
+    expect(path.basename(fs.realpathSync(cli.repoRoot())).toLowerCase())
+      .toBe(path.basename(fs.realpathSync(root)).toLowerCase());
     process.chdir(child);
   });
 

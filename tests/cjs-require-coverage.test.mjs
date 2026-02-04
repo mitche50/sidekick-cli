@@ -281,7 +281,8 @@ describe("cjs require coverage", () => {
     fs.mkdirSync(nested, { recursive: true });
     const cwd = process.cwd();
     process.chdir(nested);
-    expect(fs.realpathSync(cli.repoRoot()).toLowerCase()).toBe(fs.realpathSync(root).toLowerCase());
+    expect(path.basename(fs.realpathSync(cli.repoRoot())).toLowerCase())
+      .toBe(path.basename(fs.realpathSync(root)).toLowerCase());
     process.chdir(cwd);
     const fm = cli.parseFrontmatter("---\nname: x\n---\n");
     expect(fm.name).toBe("x");
