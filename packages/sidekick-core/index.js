@@ -46,6 +46,14 @@ function normalizePath(filePath) {
   return filePath.replace(/\\/g, "/");
 }
 
+function stripAgentsHeader(content) {
+  const lines = content.split(/\r?\n/);
+  if (lines[0] && lines[0].trim() === "# AGENTS.md") {
+    return lines.slice(1).join("\n").replace(/^\s*\n/, "");
+  }
+  return content;
+}
+
 function expandHome(dirPath) {
   if (dirPath === "~") return os.homedir();
   if (dirPath.startsWith("~/") || dirPath.startsWith("~\\")) {
@@ -120,9 +128,9 @@ function resolveModuleSearchDirs(root, config) {
   const rawDirs = Array.isArray(config.moduleDirs) && config.moduleDirs.length
     ? config.moduleDirs
     : [
+        path.join(root, "skills"),
         path.join(root, ".agents", "skills"),
-        path.join(os.homedir(), ".agents", "skills"),
-        root
+        path.join(os.homedir(), ".agents", "skills")
       ];
 
   return rawDirs.map((dir) => {
@@ -218,12 +226,20 @@ function defaultConfig() {
   return {
     version: 1,
     modules: [],
-    moduleDirs: ["./.agents/skills", "~/.agents/skills", "."],
+    moduleDirs: ["./skills", "./.agents/skills", "~/.agents/skills"],
     adapters: {
       agentsMd: true,
       symlinkFiles: ["AGENT.md", "GEMINI.md"],
       aiderConf: true,
       geminiSettings: true,
+      copilotInstructions: false,
+      claudeMd: false,
+      claudeMdSymlink: false,
+      cursorRules: false,
+      windsurfRules: false,
+      clineRules: false,
+      jetbrainsRules: false,
+      replitMd: false,
       force: false
     },
     budgets: {
@@ -274,7 +290,20 @@ function validateConfig(config) {
         }
       });
     }
-    ["agentsMd", "aiderConf", "geminiSettings", "force"].forEach((key) => {
+    [
+      "agentsMd",
+      "aiderConf",
+      "geminiSettings",
+      "copilotInstructions",
+      "claudeMd",
+      "claudeMdSymlink",
+      "cursorRules",
+      "windsurfRules",
+      "clineRules",
+      "jetbrainsRules",
+      "replitMd",
+      "force"
+    ].forEach((key) => {
       if (config.adapters[key] != null && typeof config.adapters[key] !== "boolean") {
         throw new Error(`Invalid adapters.${key}: expected a boolean.`);
       }
@@ -630,7 +659,9 @@ function writeAgentsOutputs(root, config, modules) {
   const adapters = config.adapters || {};
   const registry = adapterRegistry();
   const enabledAdapters = getEnabledAdapters(config, registry);
-  const needsAgentsMd = Boolean(adapters.agentsMd) || enabledAdapters.some((adapter) => adapter.requiresAgentsMd);
+  const needsAgentsMd = Boolean(adapters.agentsMd)
+    || Boolean(adapters.claudeMd && adapters.claudeMdSymlink)
+    || enabledAdapters.some((adapter) => adapter.requiresAgentsMd);
 
   const isManagedCopy = (filePath) => {
     const current = normalizeNewlines(fs.readFileSync(filePath, "utf8"));
@@ -649,12 +680,14 @@ function writeAgentsOutputs(root, config, modules) {
     adapters,
     agentsMdPath,
     agentsContent,
+    kernelContent: parts.kernelContent,
     prevAgentsContent,
     normalizeNewlines,
     isSafeAdapterFilename,
     isManagedSymlink,
     isManagedCopy,
     isManagedGeminiSettingsContent,
+    stripAgentsHeader,
     ensureDir
   };
 
@@ -716,5 +749,32 @@ module.exports = {
   writeAgentsOutputs,
   buildIndexEntries,
   loadTelemetry,
-  appendTelemetry
+  appendTelemetry,
+  _internal: {
+    ensureDir,
+    readJson,
+    writeJson,
+    normalizeNewlines,
+    normalizePath,
+    expandHome,
+    isManagedGeminiSettingsContent,
+    isSafeModuleName,
+    isSafeAdapterFilename,
+    isManagedSymlink,
+    resolveEntryPath,
+    formatIndexPath,
+    resolveModuleSearchDirs,
+    hashFile,
+    gitHeadForPath,
+    stripAgentsHeader,
+    validateConfig,
+    sidekickDir,
+    configPath,
+    telemetryDir,
+    readOptional,
+    readKernelSnippetLines,
+    buildAgentsParts,
+    defaultKernelTemplate,
+    loadKernelTemplate
+  }
 };

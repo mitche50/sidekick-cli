@@ -30,7 +30,10 @@ Commands:
   init               Set up .sidekick/ config and telemetry
   build              Compile AGENTS.md and the module index
   add <module>       Load a module into your config
+  add --repo <path-or-github> [--skill <name>] [--cache-dir <dir>]   Install repo as skills and add module
+  update [--repo <path-or-github>] [--ref <ref>] [--dir <path>]    Update installed skills
   remove <module>    Unload a module from your config
+  list               List discovered modules and descriptions
   report             Check which playbooks your agents actually used
   trace module <name> [--files <paths>]   Log module usage
   run [--allow-missing] -- <command>   Wrap an agent run with source tracking
@@ -77,6 +80,53 @@ function ensureGitignore(root) {
 
 function normalizePath(filePath) {
   return filePath.replace(/\\/g, "/");
+}
+
+function parseFrontmatter(content) {
+  const lines = content.split(/\r?\n/);
+  if (lines[0] !== "---") return {};
+  const data = {};
+  for (let i = 1; i < lines.length; i++) {
+    const line = lines[i];
+    if (line === "---") break;
+    const match = line.match(/^([A-Za-z0-9_-]+):\s*(.*)$/);
+    if (match) {
+      data[match[1]] = match[2];
+    }
+  }
+  return data;
+}
+
+function listModules(root, config) {
+  const dirs = Array.isArray(config.moduleDirs) ? config.moduleDirs : [];
+  const resolvedDirs = dirs.map((dir) => {
+    if (dir.startsWith("~")) {
+      return path.join(os.homedir(), dir.slice(2));
+    }
+    return path.isAbsolute(dir) ? dir : path.resolve(root, dir);
+  });
+  const found = new Map();
+  resolvedDirs.forEach((dir) => {
+    if (!fs.existsSync(dir)) return;
+    const entries = fs.readdirSync(dir, { withFileTypes: true });
+    entries.forEach((entry) => {
+      if (!entry.isDirectory()) return;
+      const moduleDir = path.join(dir, entry.name);
+      const skillPath = path.join(moduleDir, "SKILL.md");
+      const manifestPath = path.join(moduleDir, "sidekick.module.json");
+      if (!fs.existsSync(skillPath) || !fs.existsSync(manifestPath)) return;
+      if (found.has(entry.name)) return;
+      const raw = fs.readFileSync(skillPath, "utf8");
+      const fm = parseFrontmatter(raw);
+      found.set(entry.name, {
+        id: entry.name,
+        displayName: fm.name || entry.name,
+        description: fm.description || "",
+        path: moduleDir
+      });
+    });
+  });
+  return Array.from(found.values());
 }
 
 function toRegex(pattern) {
@@ -183,6 +233,12 @@ function commandInit() {
   const root = repoRoot();
   ensureConfig(root);
   ensureGitignore(root);
+  const globalSkillsDir = path.join(os.homedir(), ".agents", "skills");
+  if (!fs.existsSync(globalSkillsDir)) {
+    console.log("Global skills not found. Add skills with `sidekick add --repo` or configure moduleDirs.");
+    console.log("Ready to go. Config created at .sidekick/config.json");
+    return;
+  }
   console.log("Ready to go. Config created at .sidekick/config.json");
 }
 
@@ -194,10 +250,77 @@ function commandBuild() {
   console.log("AGENTS.md compiled. Your agents are now equipped.");
 }
 
-function commandAdd(moduleName) {
-  if (!moduleName) throw new Error("Module name required");
+function commandAdd(args) {
+  const params = Array.isArray(args) ? args : [args];
   const root = repoRoot();
   const config = loadConfig(root);
+  const repoIndex = params.indexOf("--repo");
+  if (repoIndex !== -1) {
+    const repoArg = params[repoIndex + 1];
+    if (!repoArg) throw new Error("Usage: sidekick add --repo <path-or-github> [--skill <name>] [--cache-dir <dir>]");
+    const skillIndex = params.indexOf("--skill");
+    const skillName = skillIndex !== -1 ? params[skillIndex + 1] : null;
+    if (skillIndex !== -1 && (!skillName || skillName.startsWith("--"))) {
+      throw new Error("Missing value for --skill");
+    }
+    const cacheIndex = params.indexOf("--cache-dir");
+    const cacheDir = cacheIndex !== -1 ? params[cacheIndex + 1] : path.join(os.homedir(), ".agents", "skills", ".sidekick-cache");
+    if (cacheIndex !== -1 && (!cacheDir || cacheDir.startsWith("--"))) {
+      throw new Error("Missing value for --cache-dir");
+    }
+    const { installRepoToCache, resolveRepoSpec, discoverSkillsInRepo } = require("./repo-install");
+    const repoSpec = resolveRepoSpec(repoArg);
+    const repoName = repoSpec.type === "github" ? repoSpec.repo : path.basename(repoSpec.path);
+    if (!repoName || repoName === "." || repoName === "..") {
+      throw new Error("Invalid repo name derived from path.");
+    }
+    const dest = repoSpec.type === "github"
+      ? path.join(cacheDir, repoSpec.owner, repoSpec.repo)
+      : path.join(cacheDir, repoName);
+    const cacheRoot = path.resolve(cacheDir);
+    const destResolved = path.resolve(dest);
+    if (destResolved !== cacheRoot && !destResolved.startsWith(cacheRoot + path.sep)) {
+      throw new Error("Resolved cache path escapes cache directory.");
+    }
+    const existedBefore = fs.existsSync(destResolved);
+    try {
+      installRepoToCache(repoSpec, destResolved);
+      const { root: skillsRoot, skills } = discoverSkillsInRepo(destResolved);
+      if (!skills.length) {
+        throw new Error("No skills found in repo. Expected SKILL.md at repo root or under ./skills/<skill>/SKILL.md.");
+      }
+      let target = skillName;
+      if (!target) {
+        if (skills.length === 1) {
+          target = skills[0];
+        } else {
+          throw new Error(`Multiple skills found; specify one with --skill. Found: ${skills.join(", ")}`);
+        }
+      }
+      if (!skills.includes(target)) {
+        throw new Error(`Skill not found in repo: ${target}`);
+      }
+      const moduleDirs = new Set(config.moduleDirs || []);
+      const moduleDir = target === path.basename(skillsRoot) ? path.dirname(skillsRoot) : skillsRoot;
+      moduleDirs.add(moduleDir);
+      config.moduleDirs = Array.from(moduleDirs);
+      const modules = new Set(config.modules || []);
+      modules.add(target);
+      config.modules = Array.from(modules).sort();
+      saveConfig(root, config);
+      console.log(`Installed repo to ${destResolved}`);
+      console.log(`Module loaded: ${target}`);
+      return;
+    } catch (err) {
+      if (!existedBefore && fs.existsSync(destResolved)) {
+        fs.rmSync(destResolved, { recursive: true, force: true });
+      }
+      throw err;
+    }
+  }
+
+  const moduleName = params[0];
+  if (!moduleName) throw new Error("Module name required");
   resolveModule(root, config, moduleName);
   const modules = new Set(config.modules || []);
   modules.add(moduleName);
@@ -213,6 +336,38 @@ function commandRemove(moduleName) {
   config.modules = (config.modules || []).filter((name) => name !== moduleName);
   saveConfig(root, config);
   console.log(`Module unloaded: ${moduleName}`);
+}
+
+function commandUpdate(args) {
+  const params = Array.isArray(args) ? args : [];
+  const dirIndex = params.indexOf("--dir");
+  const dirArg = dirIndex !== -1 ? params[dirIndex + 1] : path.join(os.homedir(), ".agents", "skills");
+  if (dirIndex !== -1 && (!dirArg || dirArg.startsWith("--"))) {
+    throw new Error("Missing value for --dir");
+  }
+  const repoIndex = params.indexOf("--repo");
+  const repoArg = repoIndex !== -1 ? params[repoIndex + 1] : null;
+  if (repoIndex !== -1 && (!repoArg || repoArg.startsWith("--"))) {
+    throw new Error("Missing value for --repo");
+  }
+  const refIndex = params.indexOf("--ref");
+  const refArg = refIndex !== -1 ? params[refIndex + 1] : null;
+  if (refIndex !== -1 && (!refArg || refArg.startsWith("--"))) {
+    throw new Error("Missing value for --ref");
+  }
+  const { installSkillsToDir, resolveRepoSpec, readInstallMetadata } = require("./repo-install");
+  let spec = repoArg ? resolveRepoSpec(repoArg) : null;
+  let ref = refArg;
+  if (!spec) {
+    const meta = readInstallMetadata(dirArg);
+    if (!meta || !meta.repo) {
+      throw new Error("No install metadata found. Provide --repo to update.");
+    }
+    spec = resolveRepoSpec(meta.repo);
+    ref = ref || meta.ref || null;
+  }
+  installSkillsToDir(spec, dirArg, { ref, force: true });
+  console.log(`Skills updated in ${dirArg}`);
 }
 
 function commandReport() {
@@ -251,6 +406,24 @@ function commandReport() {
   }
 }
 
+function commandList() {
+  const root = repoRoot();
+  const config = loadConfig(root);
+  const modules = listModules(root, config);
+  const configured = new Set(config.modules || []);
+  if (!modules.length) {
+    console.log("No modules discovered.");
+    return;
+  }
+  console.log("Discovered modules:");
+  modules.forEach((mod) => {
+    const status = configured.has(mod.id) ? "added" : "available";
+    const desc = mod.description ? ` — ${mod.description}` : "";
+    const nameSuffix = mod.displayName !== mod.id ? ` (${mod.displayName})` : "";
+    console.log(`- ${mod.id}${nameSuffix} [${status}]${desc}`);
+  });
+}
+
 function pickModuleForPromotion(modules, usage) {
   const counts = new Map();
   modules.forEach((mod) => counts.set(mod.name, 0));
@@ -260,7 +433,7 @@ function pickModuleForPromotion(modules, usage) {
     }
   });
   const sorted = Array.from(counts.entries()).sort((a, b) => {
-    if (a[1] !== b[1]) return a[1] - b[1];
+    if (a[1] !== b[1]) return b[1] - a[1];
     return a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0;
   });
   return sorted.length ? sorted[0][0] : null;
@@ -492,8 +665,8 @@ function commandRun(args) {
   });
 }
 
-function main() {
-  const args = process.argv.slice(2);
+function main(argv) {
+  const args = Array.isArray(argv) ? argv : process.argv.slice(2);
   const command = args[0];
   try {
     if (!command || command === "help" || command === "--help" || command === "-h") {
@@ -502,9 +675,11 @@ function main() {
     }
     if (command === "init") return commandInit();
     if (command === "build") return commandBuild();
-    if (command === "add") return commandAdd(args[1]);
+    if (command === "add") return commandAdd(args.slice(1));
+    if (command === "update") return commandUpdate(args.slice(1));
     if (command === "remove") return commandRemove(args[1]);
     if (command === "report") return commandReport();
+    if (command === "list") return commandList();
     if (command === "trace") return commandTrace(args.slice(1));
     if (command === "run") return commandRun(args.slice(1));
     if (command === "promote") return commandPromote(args.slice(1));
@@ -517,4 +692,34 @@ function main() {
   }
 }
 
-main();
+/* c8 ignore next 2 -- entrypoint is exercised by invoking the CLI directly */
+if (require.main === module) {
+  main();
+}
+
+module.exports = {
+  usage,
+  repoRoot,
+  ensureGitignore,
+  normalizePath,
+  toRegex,
+  matchesPattern,
+  collectChangedFiles,
+  triggerMatches,
+  moduleIsExpected,
+  commandInit,
+  commandBuild,
+  commandAdd,
+  commandRemove,
+  commandReport,
+  commandList,
+  commandPromote,
+  commandTrace,
+  commandRun,
+  commandUpdate,
+  pickModuleForPromotion,
+  parseFrontmatter,
+  listModules,
+  resolveConfiguredModules,
+  main
+};
