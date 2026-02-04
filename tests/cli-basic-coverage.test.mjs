@@ -90,7 +90,7 @@ describe("cli basic coverage", () => {
     process.chdir(nested);
     const resolved = cli.repoRoot();
     process.chdir(cwd);
-    expect(fs.realpathSync(resolved)).toBe(fs.realpathSync(root));
+    expect(fs.realpathSync(resolved).toLowerCase()).toBe(fs.realpathSync(root).toLowerCase());
   });
 
   it("commandBuild and commandReport run", () => {

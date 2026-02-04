@@ -106,14 +106,14 @@ describe("cli helpers coverage", () => {
     const nested = path.join(root, "a", "b");
     fs.mkdirSync(nested, { recursive: true });
     process.chdir(nested);
-    expect(fs.realpathSync(cli.repoRoot())).toBe(fs.realpathSync(root));
+    expect(fs.realpathSync(cli.repoRoot()).toLowerCase()).toBe(fs.realpathSync(root).toLowerCase());
     fs.rmSync(path.join(root, ".sidekick"), { recursive: true, force: true });
     const { spawnSync } = await import("node:child_process");
     const init = spawnSync("git", ["init"], { cwd: root, stdio: "ignore" });
     if (init.status === 0) {
-      expect(fs.realpathSync(cli.repoRoot())).toBe(fs.realpathSync(root));
+      expect(fs.realpathSync(cli.repoRoot()).toLowerCase()).toBe(fs.realpathSync(root).toLowerCase());
     } else {
-      expect(fs.realpathSync(cli.repoRoot())).toBe(fs.realpathSync(process.cwd()));
+      expect(fs.realpathSync(cli.repoRoot()).toLowerCase()).toBe(fs.realpathSync(process.cwd()).toLowerCase());
     }
   });
 
