@@ -19,6 +19,10 @@ function jsString(value) {
   return JSON.stringify(value);
 }
 
+function cliPath(value) {
+  return value.replace(/\\/g, "/");
+}
+
 function assert(condition, message) {
   if (!condition) {
     console.error(message);
@@ -98,7 +102,7 @@ try {
 }
 
 // Positive: run wrapper with Sources consulted
-const sourcePath = path.join(root, "skills", "planning-before-implementation", "playbook.md");
+const sourcePath = cliPath(path.join(root, "skills", "planning-before-implementation", "playbook.md"));
 result = runNode(["run", "--", "node", "-e", `console.log("Sources consulted: " + ${jsString(sourcePath)})`]);
 assert(result.status === 0, "run wrapper should succeed when Sources consulted is present");
 
@@ -111,12 +115,12 @@ result = runNode(["run", "--", "node", "-e", "console.log('Sources consulted: /t
 assert(result.status !== 0, "run wrapper should fail when Sources consulted does not map to modules");
 
 // Negative: nonexistent path inside module should fail
-const nonexistentInsideModule = path.join(root, "skills", "planning-before-implementation", "missing.md");
+const nonexistentInsideModule = cliPath(path.join(root, "skills", "planning-before-implementation", "missing.md"));
 result = runNode(["run", "--", "node", "-e", `console.log("Sources consulted: " + ${jsString(nonexistentInsideModule)})`]);
 assert(result.status !== 0, "run wrapper should fail when Sources consulted points to a missing file inside a module");
 
 // Negative: mixed real + missing sources should fail
-const realPlaybook = path.join(root, "skills", "planning-before-implementation", "playbook.md");
+const realPlaybook = cliPath(path.join(root, "skills", "planning-before-implementation", "playbook.md"));
 result = runNode(["run", "--", "node", "-e", `console.log("Sources consulted: " + ${jsString(realPlaybook)} + ", " + ${jsString(nonexistentInsideModule)})`]);
 assert(result.status !== 0, "run wrapper should fail when any Sources consulted path is missing");
 
