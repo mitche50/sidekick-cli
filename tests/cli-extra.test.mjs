@@ -20,10 +20,14 @@ async function importCli(mocks = {}) {
 }
 
 function makeChild() {
-const child = new EventEmitter();
+  const child = new EventEmitter();
   child.stdout = new PassThrough();
   child.stderr = new PassThrough();
   return child;
+}
+
+async function flushTimers() {
+  await new Promise((resolve) => setTimeout(resolve, 10));
 }
 
 function writeConfig(root, config) {
@@ -437,149 +441,149 @@ describe("sidekick CLI extra coverage", () => {
     expect(() => cli.commandTrace(["module", "mod-trace"])).toThrow(/Unsupported telemetry mode/);
   });
 
-  it("commandRun handles stderr, tail sources, and signal exits", async () => {
-    const root = makeTempDir();
-    process.chdir(root);
-    const skillsRoot = path.join(root, "skills");
-    fs.mkdirSync(skillsRoot, { recursive: true });
-    writeModule(skillsRoot, "mod-run");
-    const cfg = core.defaultConfig();
-    cfg.moduleDirs = [skillsRoot];
-    cfg.modules = ["mod-run"];
-    core.saveConfig(root, cfg);
-    const child = makeChild();
-    const cli = await importCli({
-      childProcess: {
-        spawn: () => child,
-        spawnSync: vi.fn(() => ({ status: 1, stdout: "" }))
-      }
-    });
-    const exitSpy = vi.spyOn(process, "exit").mockImplementation(() => {});
-    cli.commandRun(["--", "node", "-e", "process.stdout.write('x')"]);
-    child.stderr.write("err\n");
-    child.stdout.write("Sources consulted: " + path.join(skillsRoot, "mod-run", "playbook.md"));
-    child.emit("close", null, "SIGINT");
-    await new Promise((resolve) => setImmediate(resolve));
-    exitSpy.mockRestore();
-  });
+  describe("commandRun exit handling", () => {
+    let exitSpy;
 
-  it("commandRun enforces telemetry mode and caps buffers", async () => {
-    const root = makeTempDir();
-    process.chdir(root);
-    const skillsRoot = path.join(root, "skills");
-    fs.mkdirSync(skillsRoot, { recursive: true });
-    writeModule(skillsRoot, "mod-cap");
-    const cfg = core.defaultConfig();
-    cfg.moduleDirs = [skillsRoot];
-    cfg.modules = ["mod-cap"];
-    cfg.telemetry.mode = "remote";
-    writeConfig(root, cfg);
-    const cliBad = await importCli();
-    expect(() => cliBad.commandRun(["--", "node", "-e", "process.stdout.write('x')"])).toThrow(/Unsupported telemetry mode/);
-
-    cfg.telemetry.mode = "local";
-    writeConfig(root, cfg);
-    const child = makeChild();
-    const cli = await importCli({
-      childProcess: {
-        spawn: () => child,
-        spawnSync: vi.fn(() => ({ status: 1, stdout: "" }))
-      }
+    beforeEach(() => {
+      exitSpy = vi.spyOn(process, "exit").mockImplementation(() => {});
     });
-    const exitSpy = vi.spyOn(process, "exit").mockImplementation(() => {});
-    cli.commandRun(["--", "node", "-e", "process.stdout.write('x')"]);
-    const big = "x".repeat(70000);
-    const sourcePath = path.join(skillsRoot, "mod-cap", "playbook.md");
-    child.stdout.write(`${big}\nSources consulted: ${sourcePath}\n`);
-    child.emit("close", 0, null);
-    await new Promise((resolve) => setImmediate(resolve));
-    exitSpy.mockRestore();
-  });
 
-  it("commandRun handles spawn error", async () => {
-    const root = makeTempDir();
-    process.chdir(root);
-    core.saveConfig(root, core.defaultConfig());
-    const child = makeChild();
-    child.on("error", () => {});
-    const cli = await importCli({
-      childProcess: {
-        spawn: () => child,
-        spawnSync: vi.fn(() => ({ status: 1, stdout: "" }))
-      }
+    afterEach(() => {
+      exitSpy.mockRestore();
     });
-    const exitSpy = vi.spyOn(process, "exit").mockImplementation(() => {});
-    cli.commandRun(["--", "definitely-not-a-command"]);
-    child.emit("error", new Error("spawn failure"));
-    child.emit("close", 1, null);
-    await new Promise((resolve) => setImmediate(resolve));
-    exitSpy.mockRestore();
-  });
 
-  it("commandRun rejects unmapped sources", async () => {
-    const root = makeTempDir();
-    process.chdir(root);
-    core.saveConfig(root, core.defaultConfig());
-    const child2 = makeChild();
-    const cli2 = await importCli({
-      childProcess: {
-        spawn: () => child2,
-        spawnSync: vi.fn(() => ({ status: 1, stdout: "" }))
-      }
+    it("commandRun handles stderr, tail sources, and signal exits", async () => {
+      const root = makeTempDir();
+      process.chdir(root);
+      const skillsRoot = path.join(root, "skills");
+      fs.mkdirSync(skillsRoot, { recursive: true });
+      writeModule(skillsRoot, "mod-run");
+      const cfg = core.defaultConfig();
+      cfg.moduleDirs = [skillsRoot];
+      cfg.modules = ["mod-run"];
+      core.saveConfig(root, cfg);
+      const child = makeChild();
+      const cli = await importCli({
+        childProcess: {
+          spawn: () => child,
+          spawnSync: vi.fn(() => ({ status: 1, stdout: "" }))
+        }
+      });
+      cli.commandRun(["--", "node", "-e", "process.stdout.write('x')"]);
+      child.stderr.write("err\n");
+      child.stdout.write("Sources consulted: " + path.join(skillsRoot, "mod-run", "playbook.md"));
+      child.emit("close", null, "SIGINT");
+      await flushTimers();
     });
-    const exitSpy2 = vi.spyOn(process, "exit").mockImplementation(() => {});
-    const existing = path.join(root, "exists.txt");
-    fs.writeFileSync(existing, "x");
-    cli2.commandRun(["--", "node", "-e", "process.stdout.write('x')"]);
-    child2.stdout.write(`Sources consulted: ${existing}\n`);
-    child2.emit("close", 0, null);
-    await new Promise((resolve) => setImmediate(resolve));
-    exitSpy2.mockRestore();
-  });
 
-  it("commandRun rejects unmapped sources and handles telemetry append", async () => {
-    const root = makeTempDir();
-    process.chdir(root);
-    const skillsRoot = path.join(root, "skills");
-    fs.mkdirSync(skillsRoot, { recursive: true });
-    writeModule(skillsRoot, "mod-map");
-    const cfg = core.defaultConfig();
-    cfg.moduleDirs = [skillsRoot];
-    cfg.modules = ["mod-map"];
-    core.saveConfig(root, cfg);
-    const child = makeChild();
-    const cli = await importCli({
-      childProcess: {
-        spawn: () => child,
-        spawnSync: vi.fn(() => ({ status: 1, stdout: "" }))
-      }
-    });
-    const exitSpy = vi.spyOn(process, "exit").mockImplementation(() => {});
-    const good = path.join(skillsRoot, "mod-map", "playbook.md");
-    cli.commandRun(["--", "node", "-e", "process.stdout.write('x')"]);
-    child.stdout.write(`Sources consulted: ${good}\n`);
-    child.emit("close", 2, null);
-    await new Promise((resolve) => setImmediate(resolve));
-    exitSpy.mockRestore();
-  });
+    it("commandRun enforces telemetry mode and caps buffers", async () => {
+      const root = makeTempDir();
+      process.chdir(root);
+      const skillsRoot = path.join(root, "skills");
+      fs.mkdirSync(skillsRoot, { recursive: true });
+      writeModule(skillsRoot, "mod-cap");
+      const cfg = core.defaultConfig();
+      cfg.moduleDirs = [skillsRoot];
+      cfg.modules = ["mod-cap"];
+      cfg.telemetry.mode = "remote";
+      writeConfig(root, cfg);
+      const cliBad = await importCli();
+      expect(() => cliBad.commandRun(["--", "node", "-e", "process.stdout.write('x')"])).toThrow(/Unsupported telemetry mode/);
 
-  it("commandRun reports missing and unmapped sources", async () => {
-    const root = makeTempDir();
-    process.chdir(root);
-    core.saveConfig(root, core.defaultConfig());
-    const child = makeChild();
-    const cli = await importCli({
-      childProcess: {
-        spawn: () => child,
-        spawnSync: vi.fn(() => ({ status: 1, stdout: "" }))
-      }
+      cfg.telemetry.mode = "local";
+      writeConfig(root, cfg);
+      const child = makeChild();
+      const cli = await importCli({
+        childProcess: {
+          spawn: () => child,
+          spawnSync: vi.fn(() => ({ status: 1, stdout: "" }))
+        }
+      });
+      cli.commandRun(["--", "node", "-e", "process.stdout.write('x')"]);
+      const big = "x".repeat(70000);
+      const sourcePath = path.join(skillsRoot, "mod-cap", "playbook.md");
+      child.stdout.write(`${big}\nSources consulted: ${sourcePath}\n`);
+      child.emit("close", 0, null);
+      await flushTimers();
     });
-    const exitSpy = vi.spyOn(process, "exit").mockImplementation(() => {});
-    cli.commandRun(["--", "node", "-e", "process.stdout.write('x')"]);
-    child.stdout.write("Sources consulted: missing.txt\n");
-    child.emit("close", 0, null);
-    await new Promise((resolve) => setImmediate(resolve));
-    exitSpy.mockRestore();
+
+    it("commandRun handles spawn error", async () => {
+      const root = makeTempDir();
+      process.chdir(root);
+      core.saveConfig(root, core.defaultConfig());
+      const child = makeChild();
+      child.on("error", () => {});
+      const cli = await importCli({
+        childProcess: {
+          spawn: () => child,
+          spawnSync: vi.fn(() => ({ status: 1, stdout: "" }))
+        }
+      });
+      cli.commandRun(["--", "definitely-not-a-command"]);
+      child.emit("error", new Error("spawn failure"));
+      child.emit("close", 1, null);
+      await flushTimers();
+    });
+
+    it("commandRun rejects unmapped sources", async () => {
+      const root = makeTempDir();
+      process.chdir(root);
+      core.saveConfig(root, core.defaultConfig());
+      const child2 = makeChild();
+      const cli2 = await importCli({
+        childProcess: {
+          spawn: () => child2,
+          spawnSync: vi.fn(() => ({ status: 1, stdout: "" }))
+        }
+      });
+      const existing = path.join(root, "exists.txt");
+      fs.writeFileSync(existing, "x");
+      cli2.commandRun(["--", "node", "-e", "process.stdout.write('x')"]);
+      child2.stdout.write(`Sources consulted: ${existing}\n`);
+      child2.emit("close", 0, null);
+      await flushTimers();
+    });
+
+    it("commandRun rejects unmapped sources and handles telemetry append", async () => {
+      const root = makeTempDir();
+      process.chdir(root);
+      const skillsRoot = path.join(root, "skills");
+      fs.mkdirSync(skillsRoot, { recursive: true });
+      writeModule(skillsRoot, "mod-map");
+      const cfg = core.defaultConfig();
+      cfg.moduleDirs = [skillsRoot];
+      cfg.modules = ["mod-map"];
+      core.saveConfig(root, cfg);
+      const child = makeChild();
+      const cli = await importCli({
+        childProcess: {
+          spawn: () => child,
+          spawnSync: vi.fn(() => ({ status: 1, stdout: "" }))
+        }
+      });
+      const good = path.join(skillsRoot, "mod-map", "playbook.md");
+      cli.commandRun(["--", "node", "-e", "process.stdout.write('x')"]);
+      child.stdout.write(`Sources consulted: ${good}\n`);
+      child.emit("close", 2, null);
+      await flushTimers();
+    });
+
+    it("commandRun reports missing and unmapped sources", async () => {
+      const root = makeTempDir();
+      process.chdir(root);
+      core.saveConfig(root, core.defaultConfig());
+      const child = makeChild();
+      const cli = await importCli({
+        childProcess: {
+          spawn: () => child,
+          spawnSync: vi.fn(() => ({ status: 1, stdout: "" }))
+        }
+      });
+      cli.commandRun(["--", "node", "-e", "process.stdout.write('x')"]);
+      child.stdout.write("Sources consulted: missing.txt\n");
+      child.emit("close", 0, null);
+      await flushTimers();
+    });
   });
 
   it("runs main when module is main", async () => {
