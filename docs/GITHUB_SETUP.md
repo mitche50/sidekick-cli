@@ -13,4 +13,4 @@ git remote add origin https://github.com/mitche50/sidekick-cli
 git push -u origin main
 ```
 
-Tip: If you clone the repo directly into `~/.agents/skills`, your personal skills are automatically available across all projects that support `SKILL.md` discovery.
+Tip: For the clean global path, copy the repo’s `skills/` directory into `~/.agents/skills`.

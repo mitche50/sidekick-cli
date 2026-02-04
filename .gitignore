@@ -1,12 +1,5 @@
-# Node
 node_modules/
-
-# Sidekick
-.sidekick/telemetry/
-.sidekick/index.min.txt
-
-# OS / editor
+coverage/
 .DS_Store
-Thumbs.db
-.idea/
-.vscode/
+.sidekick/
+.sidekick-cache/

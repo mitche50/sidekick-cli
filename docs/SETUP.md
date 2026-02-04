@@ -3,7 +3,7 @@
 This repo gives you:
 
 - **Version-controlled skills** via GitHub
-- **One install, every codebase** (personal skills directory)
+- **One skills library, every codebase** (personal skills directory)
 - **Optional per-project overrides** via symlinks or copies
 - **Compiled AGENTS.md** via Sidekick, so your agents always have context
 
@@ -14,9 +14,9 @@ This repo gives you:
 Sidekick assembles `AGENTS.md` and a compact index from your selected modules:
 
 ```bash
-node ~/.agents/skills/packages/sidekick-cli/bin/sidekick.js init
-node ~/.agents/skills/packages/sidekick-cli/bin/sidekick.js add planning-before-implementation
-node ~/.agents/skills/packages/sidekick-cli/bin/sidekick.js build
+sidekick init
+sidekick add planning-before-implementation
+sidekick build
 ```
 
 This creates:
@@ -62,9 +62,9 @@ Agents that support `SKILL.md` discovery look in these locations:
 
 Sidekick resolves modules in this order by default:
 
-1. `./.agents/skills`
-2. `~/.agents/skills`
-3. Project root
+1. `./skills`
+2. `./.agents/skills`
+3. `~/.agents/skills`
 
 Override with `moduleDirs` in `.sidekick/config.json`.
 
@@ -74,13 +74,19 @@ If the same skill name exists at multiple levels, the higher-priority location w
 
 ---
 
-## 3) Installing this repo
+## 3) Adding skills to a project
 
-### Clone into the personal skills directory (recommended)
+Use a local cache for a specific repo and load a module:
 
 ```bash
-mkdir -p ~/.agents
-git clone https://github.com/mitche50/sidekick-cli ~/.agents/skills
+sidekick add --repo owner/repo --skill planning-before-implementation
+```
+
+If you want a global skills library shared across projects, install it into `~/.agents/skills`:
+
+```bash
+sidekick update --repo mitche50/sidekick-cli --dir ~/.agents/skills
+sidekick add planning-before-implementation
 ```
 
 ---

@@ -10,11 +10,12 @@ This repo is meant to be your personal (or team) Sidekick module library. Here's
 
 ## Adding a skill
 
-1. Create a folder at repo root, named in kebab-case (gerund form preferred).
+1. Create a folder under `skills/`, named in kebab-case (gerund form preferred).
 2. Add `SKILL.md` with required YAML frontmatter (`name`, `description`).
 3. Add examples or templates as needed.
 4. Add `sidekick.module.json`, `playbook.md`, and `snippets/kernel.md`.
 5. Run `sidekick build` in a consuming repo to verify it compiles.
+6. If you touch the kernel template, keep `templates/agents-md/kernel.md` and `packages/sidekick-core/templates/agents-md/kernel.md` in sync.
 
 ## Adding an adapter (core)
 

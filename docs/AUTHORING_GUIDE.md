@@ -6,8 +6,12 @@ A few conventions to keep skills discoverable, maintainable, and safe to share.
 
 ## Folder + file rules
 
-- One skill = one folder at repo root (e.g., `planning-before-implementation/`)
-- Each skill folder **must** contain `SKILL.md`
+- One skill = one folder under `skills/` (e.g., `skills/planning-before-implementation/`)
+- Each skill folder **must** contain:
+  - `SKILL.md`
+  - `sidekick.module.json`
+  - `playbook.md`
+  - `snippets/kernel.md`
 - Optional: `examples/`, `templates/`, `resources/`
 
 ---
@@ -47,14 +51,14 @@ Design the first ~30 lines of your skill to cover:
 
 ---
 
-## Examples beat prose
+## Examples (optional, but recommended for complex skills)
 
-Put at least one realistic example in `examples/`:
+If a skill is complex or non-obvious, add at least one realistic example in `examples/`:
 
 - `examples/example-1.input.md`
 - `examples/example-1.output.md`
 
-Reference them from `SKILL.md`:
+Reference them from `SKILL.md` when present:
 
 > See `examples/example-1.output.md` for the desired structure and tone.
 
