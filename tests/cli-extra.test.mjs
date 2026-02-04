@@ -597,21 +597,19 @@ describe("sidekick CLI extra coverage", () => {
     });
   });
 
-  it("runs main when module is main", async () => {
-    const Module = await import("node:module");
-    const cliPath = path.resolve("packages/sidekick-cli/bin/sidekick.js");
-    const code = fs.readFileSync(cliPath, "utf8");
-    const mod = new Module.default(cliPath, Module.default);
-    mod.filename = cliPath;
-    mod.paths = Module.default._nodeModulePaths(path.dirname(cliPath));
-    const originalMain = process.mainModule;
-    process.mainModule = mod;
-    const exitSpy = vi.spyOn(process, "exit").mockImplementation(() => {});
-    const argv = process.argv;
-    process.argv = ["node", "sidekick", "help"];
-    mod._compile(code, cliPath);
-    process.argv = argv;
-    process.mainModule = originalMain;
-    exitSpy.mockRestore();
+    it("runs main when module is main", async () => {
+      const Module = await import("node:module");
+      const cliPath = path.resolve("packages/sidekick-cli/bin/sidekick.js");
+      const code = fs.readFileSync(cliPath, "utf8");
+      const mod = new Module.default(cliPath, Module.default);
+      mod.filename = cliPath;
+      mod.paths = Module.default._nodeModulePaths(path.dirname(cliPath));
+      const originalMain = process.mainModule;
+      process.mainModule = mod;
+      const argv = process.argv;
+      process.argv = ["node", "sidekick", "help"];
+      mod._compile(code, cliPath);
+      process.argv = argv;
+      process.mainModule = originalMain;
+    });
   });
-});
