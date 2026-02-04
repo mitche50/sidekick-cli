@@ -17,12 +17,12 @@ jobs:
           node-version: "20"
 
       - name: Install dependencies
-        run: npm install
+        run: npm ci
 
       - name: Validate module structure
         run: |
           set -euo pipefail
-          for dir in */ ; do
+          for dir in skills/*/ ; do
             if [ -f "${dir}SKILL.md" ]; then
               test -f "${dir}sidekick.module.json"
               test -f "${dir}playbook.md"
@@ -32,6 +32,9 @@ jobs:
 
       - name: Smoke test CLI
         run: node .github/scripts/test-cli.js
+
+      - name: Unit tests
+        run: npm test
 
   validate-windows:
     runs-on: windows-latest
@@ -45,7 +48,10 @@ jobs:
           node-version: "20"
 
       - name: Install dependencies
-        run: npm install
+        run: npm ci
 
       - name: Smoke test CLI (Windows)
         run: node .github/scripts/test-cli.js
+
+      - name: Unit tests (Windows)
+        run: npm test

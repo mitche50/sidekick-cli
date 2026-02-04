@@ -10,10 +10,16 @@
     "node": ">=18"
   },
   "scripts": {
-    "publish:all": "cd packages/sidekick-core && npm publish --access public && cd ../sidekick-cli && npm publish --access public"
+    "publish:all": "cd packages/sidekick-core && npm publish --access public && cd ../sidekick-cli && npm publish --access public",
+    "test": "vitest run",
+    "coverage": "vitest run --coverage"
   },
   "workspaces": [
     "packages/sidekick-core",
     "packages/sidekick-cli"
-  ]
+  ],
+  "devDependencies": {
+    "@vitest/coverage-v8": "^2.1.9",
+    "vitest": "^2.1.9"
+  }
 }
