@@ -69,6 +69,10 @@ describe("sidekick CLI extra coverage", () => {
   let core;
   let skipRestore = false;
   let exitSpy;
+  beforeAll(() => {
+    skipRestore = true;
+    exitSpy = vi.spyOn(process, "exit").mockImplementation(() => {});
+  });
   beforeEach(() => {
     cwd = process.cwd();
   });
@@ -455,15 +459,6 @@ describe("sidekick CLI extra coverage", () => {
   });
 
   describe("commandRun exit handling", () => {
-    beforeAll(() => {
-      skipRestore = true;
-      exitSpy = vi.spyOn(process, "exit").mockImplementation(() => {});
-    });
-
-    afterAll(async () => {
-      await flushTimers();
-    });
-
     afterEach(async () => {
       await flushTimers();
     });
