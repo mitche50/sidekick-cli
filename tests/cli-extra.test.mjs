@@ -68,6 +68,7 @@ describe("sidekick CLI extra coverage", () => {
   let cwd;
   let core;
   let skipRestore = false;
+  let exitSpy;
   beforeEach(() => {
     cwd = process.cwd();
   });
@@ -84,6 +85,15 @@ describe("sidekick CLI extra coverage", () => {
     if (!skipRestore) {
       vi.restoreAllMocks();
     }
+  });
+
+  afterAll(async () => {
+    await flushTimers();
+    if (exitSpy) {
+      exitSpy.mockRestore();
+    }
+    skipRestore = false;
+    vi.restoreAllMocks();
   });
 
   it("uses fallback core require when package missing", async () => {
@@ -445,8 +455,6 @@ describe("sidekick CLI extra coverage", () => {
   });
 
   describe("commandRun exit handling", () => {
-    let exitSpy;
-
     beforeAll(() => {
       skipRestore = true;
       exitSpy = vi.spyOn(process, "exit").mockImplementation(() => {});
@@ -454,9 +462,6 @@ describe("sidekick CLI extra coverage", () => {
 
     afterAll(async () => {
       await flushTimers();
-      exitSpy.mockRestore();
-      skipRestore = false;
-      vi.restoreAllMocks();
     });
 
     afterEach(async () => {
